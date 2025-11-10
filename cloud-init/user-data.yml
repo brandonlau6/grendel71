@@ -1,0 +1,21 @@
+#cloud-config
+package_upgrade: true
+packages:
+  - qemu-guest-agent
+
+timezone: Europe/Oslo
+users:
+  - name: blau
+    passwd: effort1911
+    groups: [adm, cdrom, dip, plugdev, lxd, sudo]
+    lock-passwd: false
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFnx/ZGyG6ED/Pe1SUWEDeGhuAl5PV6thdet6Pu9p55z blau@blau-pc
+
+power_state:
+    delay: now
+    mode: reboot
+    message: Rebooting after cloud-init completion
+    condition: true
