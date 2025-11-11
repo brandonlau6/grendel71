@@ -1,2 +1,4 @@
 intranet.pub
 provider.tf
+.terraform
+.terraform*
