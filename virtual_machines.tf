@@ -1,50 +1,100 @@
-data "local_file" "ssh_public_key" {
-  filename = "./intranet.pub"
-}
+resource "proxmox_virtual_environment_vm" "talos_cp_01" {
+  name        = "talos-cp-01"
+  description = "Managed by Terraform"
+  tags        = ["terraform"]
+  node_name   = "pve4"
+  on_boot     = true
 
-resource "proxmox_virtual_environment_vm" "ubuntu_vm" {
-  name      = "test-ubuntu"
-  node_name = "pve4"
-
-  # should be true if qemu agent is not installed / enabled on the VM
-  stop_on_destroy = true
-
-  initialization {
-    # uncomment and specify the datastore for cloud-init disk if default `local-lvm` is not available
-    # datastore_id = "local-lvm"
-
-    ip_config {
-      ipv4 {
-        address = "192.168.1.233/24"
-        gateway = "192.168.1.1"
-      }
-    }
-
-    user_account {
-      username = "ubuntu"
-      keys     = [trimspace(data.local_file.ssh_public_key.content)]
-    }
+  cpu {
+    cores = 2
+    type = "x86-64-v2-AES"
   }
 
-  disk {
-    datastore_id = "local-lvm"
-    import_from  = proxmox_virtual_environment_download_file.ubuntu_cloud_image.id
-    interface    = "virtio0"
-    iothread     = true
-    discard      = "on"
-    size         = 25
+  memory {
+    dedicated = 4096
+  }
+
+  agent {
+    enabled = true
   }
 
   network_device {
     bridge = "vmbr0"
   }
+
+  disk {
+    datastore_id = "local-lvm"
+    file_id      = proxmox_virtual_environment_download_file.talos_nocloud_image.id
+    file_format  = "raw"
+    interface    = "virtio0"
+    size         = 20
+  }
+
+  operating_system {
+    type = "l26" # Linux Kernel 2.6 - 5.X.
+  }
+
+  initialization {
+    datastore_id = "local-lvm"
+    ip_config {
+      ipv4 {
+        address = "${var.talos_cp_01_ip_addr}/24"
+        gateway = var.default_gateway
+      }
+      ipv6 {
+        address = "dhcp"
+      }
+    }
+  }
 }
 
-resource "proxmox_virtual_environment_download_file" "ubuntu_cloud_image" {
-  content_type = "import"
-  datastore_id = "pveFS"
-  node_name    = "pve4"
-  url          = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
-  # need to rename the file to *.qcow2 to indicate the actual file format for import
-  file_name = "jammy-server-cloudimg-amd64.qcow2"
+resource "proxmox_virtual_environment_vm" "talos_worker_01" {
+  depends_on = [ proxmox_virtual_environment_vm.talos_cp_01 ]
+  name        = "talos-worker-01"
+  description = "Managed by Terraform"
+  tags        = ["terraform"]
+  node_name   = "pve4"
+  on_boot     = true
+
+  cpu {
+    cores = 4
+    type = "x86-64-v2-AES"
+  }
+
+  memory {
+    dedicated = 4096
+  }
+
+  agent {
+    enabled = true
+  }
+
+  network_device {
+    bridge = "vmbr0"
+  }
+
+  disk {
+    datastore_id = "local-lvm"
+    file_id      = proxmox_virtual_environment_download_file.talos_nocloud_image.id
+    file_format  = "raw"
+    interface    = "virtio0"
+    size         = 20
+  }
+
+  operating_system {
+    type = "l26" # Linux Kernel 2.6 - 5.X.
+  }
+
+  initialization {
+    datastore_id = "local-lvm"
+    ip_config {
+      ipv4 {
+        address = "${var.talos_worker_01_ip_addr}/24"
+        gateway = var.default_gateway
+      }
+      ipv6 {
+        address = "dhcp"
+      }
+    }
+  }
 }
